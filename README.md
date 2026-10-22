@@ -11,6 +11,20 @@ live in `commands/<skill>/`.
 |---|---|
 | [`skills/ytnote`](skills/ytnote) | Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights. Searches stored transcripts by keyword. Can re-transcribe from audio when the captions are too lossy. |
 
+## Security
+
+`ytnote` ingests third-party content by design: the transcript, the title and the description
+come from a YouTube page the user supplies. The skill treats all of it as **data, never
+instructions** — the `SKILL.md` has an explicit *Untrusted content* section, the only commands
+it runs are the ones written in the skill file, and their arguments come from the video ID and
+the paths named there, never from fetched text.
+
+The automated audits on skills.sh report this skill as **Socket: 0 alerts / Snyk: MEDIUM (W011
+"Exposure to untrusted third-party content")**. That finding is accurate rather than a defect:
+W011 is a statement about the data flow, and a skill that turns a YouTube URL into a transcript
+cannot avoid it. The mitigation is the handling above plus a narrow blast radius — the captions
+path needs no API key, no audio download and runs no command taken from the fetched text.
+
 ## Install
 
 ```bash
