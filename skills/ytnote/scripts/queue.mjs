@@ -1,5 +1,5 @@
 // Queue of videos waiting for YouTube to generate ASR captions.
-// Usage: node queue.mjs <list|due|add|bump|drop> [videoId] [url]
+// Usage: node queue.mjs <list|due|titles|add|bump|drop> [videoId] [url]
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -26,6 +26,28 @@ if (cmd === 'list') {
   console.log(JSON.stringify(rows, null, 2))
 } else if (cmd === 'due') {
   console.log(JSON.stringify(rows.filter((r) => !r.gaveUp && r.nextCheckAt <= now), null, 2))
+} else if (cmd === 'titles') {
+  // A queued video has no meta.json yet, so the title is not on disk. Resolve it here:
+  // oEmbed for the title, the watch page for the upload date. Both best effort.
+  const enriched = await Promise.all(
+    rows.map(async (r) => {
+      const info = { videoId: r.videoId, title: 'unknown', uploadDate: 'unknown', attempts: r.attempts, nextCheckAt: r.nextCheckAt, gaveUp: r.gaveUp }
+      try {
+        const o = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://youtu.be/' + r.videoId)}&format=json`).then((x) => x.json())
+        info.title = o.title
+        info.author = o.author_name
+      } catch {}
+      try {
+        const html = await fetch(`https://www.youtube.com/watch?v=${r.videoId}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        }).then((x) => x.text())
+        const m = html.match(/"uploadDate":"([^"]+)"/) ?? html.match(/"publishDate":"([^"]+)"/)
+        if (m) info.uploadDate = m[1].slice(0, 10)
+      } catch {}
+      return info
+    }),
+  )
+  console.log(JSON.stringify(enriched, null, 2))
 } else if (cmd === 'add' && id && url) {
   const existing = rows.find((r) => r.videoId === id)
   // One check already happened, so the first retry waits a full backoff step.
@@ -61,6 +83,6 @@ if (cmd === 'list') {
   save(rows.filter((r) => r.videoId !== id))
   console.log(`dropped ${id}`)
 } else {
-  console.error('usage: node queue.mjs <list|due|add|bump|drop> [videoId] [url]')
+  console.error('usage: node queue.mjs <list|due|titles|add|bump|drop> [videoId] [url]')
   process.exit(1)
 }

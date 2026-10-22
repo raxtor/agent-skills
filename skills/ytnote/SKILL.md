@@ -59,7 +59,10 @@ start-of-invocation checks first (queue, size), then, in the user's language:
 2. Show the library: the 10 most recently added videos from `<root>/*/meta.json` (sort by
    `fetchedAt`), each with title, publish date, and whether `note.md` exists. If there are
    more, say how many.
-3. Ask for a URL, or which of them to open.
+3. If the queue is not empty, show it as well (see "Reporting the queue"): how many videos are
+   waiting, as a table with titles. The user decides from there — keep waiting, drop, or
+   transcribe.
+4. Ask for a URL, or which of them to open.
 
 An empty store skips step 2: description plus a request for the first URL.
 
@@ -186,9 +189,11 @@ One transcript per video is intentional: two copies would leave `note.md` ambigu
 captions version can always be fetched again for free.
 Re-running `--audio` on a video that is already transcribed pays again — if only the note is
 missing, use the existing transcript instead.
-It costs money per minute, so run it only when asked. An existing `note.md` was built from the
-old text — say that it is now stale and offer to regenerate it. Prerequisites are listed under
-"No transcript".
+It is usually billed per minute (Deepgram), but it can be free: Groq's Whisper is free and
+takes up to ~25 MB of audio per request — roughly 20 minutes of a talk, so longer videos need
+a different provider. Either way it needs a provider key and network, so run it only when
+asked. An existing `note.md` was built from the old text — say that it is now stale and offer
+to regenerate it. Prerequisites are listed under "No transcript".
 
 ## Audio transcription — language and provider
 
@@ -201,6 +206,8 @@ needed:
   real environment if that yields no transcript, so a video is never lost because one provider
   failed. `transcriptionProvider` in the result says who actually transcribed — the note must
   name that instead of assuming Deepgram.
+- **Cost.** Deepgram is billed per minute; Groq's Whisper is free but accepts up to ~25 MB of
+  audio per request. Say which one applies before spending anything.
 - **Language.** It cannot be forced: the request always sends `detect_language=true`. The
   only Deepgram-specific lever is the model (`SUMMARIZE_DEEPGRAM_TRANSCRIPTION_MODEL`, default
   `nova-3`); the other providers have their own.
@@ -225,13 +232,16 @@ caption track for the video. Then:
    normalize leaves it behind); missing means unknown.
 2. Delete the `<root>/<videoId>/` directory this run created, so a stale cache entry cannot
    pretend to be a transcript.
-3. Ask the user which way to go, and give a recommendation based on that date:
+3. Ask the user which way to go — wait, transcribe from audio, or drop it from the queue
+   (`node "<skill-dir>/scripts/queue.mjs" drop <videoId>`) — and give a recommendation based
+   on that date:
    - **uploaded less than ~30 days ago → wait.** Captions are usually generated within hours;
      queue it with `node "<skill-dir>/scripts/queue.mjs" add <videoId> "<url>"` and say when
      it will be re-checked.
    - **older than ~30 days, or date unavailable → transcribe from audio.** YouTube does not
      add captions retroactively to old videos (captions disabled, music only, unsupported
-     language), so waiting is pointless.
+     language), so waiting is pointless. Name the cost: free up to the provider's size limit
+     (Groq's Whisper, ~25 MB of audio) or billed per minute (Deepgram).
 4. Transcribe only on explicit consent:
    `node "<skill-dir>/scripts/fetch.mjs" <videoId> --audio`, then normalize as usual.
    If normalize still finds no segments after that, the message names the reason — check the
@@ -263,6 +273,27 @@ files it counts — never the transcribed ones, and never without asking.
 
 `due` is a time filter, so processing other videos in between costs nothing — nothing is
 re-checked before its window has passed.
+
+### Reporting the queue to the user
+
+A queued video has no `meta.json` yet, so its title is not on disk. Resolve it before showing
+the queue — a bare videoId tells the user nothing about what they are deciding on:
+
+```
+node "<skill-dir>/scripts/queue.mjs" titles
+```
+
+One JSON entry per waiting video: `videoId`, `title`, `author`, `uploadDate`, `attempts`,
+`nextCheckAt`, `gaveUp`. Render it as a table and lead with the count — "2 videos waiting":
+
+| videoId | title | uploaded | attempts | next check |
+|---|---|---|---|---|
+| `AQavE0b-jNs` | Jan Pivec vzpomíná (TV film) — RETRO SHOW OK3 | 2021-03-18 | 2 | 2026-10-23 |
+
+`nextCheckAt` is unix ms — render it as a date. The upload date is best effort ("unknown" when
+YouTube does not say). The title is the point: the user decides from it whether to keep
+waiting, drop the video, or transcribe it. Mark entries with `gaveUp: true` as no longer
+retried.
 
 If the client can schedule work (cron, wake-up, queued task), offer to schedule a one-shot
 check for the entry's `nextCheckAt` (visible in `queue.mjs list`). Treat that as a bonus, not a
