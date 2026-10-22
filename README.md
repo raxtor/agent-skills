@@ -13,11 +13,31 @@ Moje vlastní skills pro agenty. Každý skill = jedna složka pod `skills/`.
 ## Instalace
 
 ```bash
-npx skills add raxtor/my-skills -g -y     # z GitHubu (doporučeno — funguje i npx skills update)
-npx skills add <lokalní cesta> -g -y     # z lokální kopie repo
+npx skills add raxtor/my-skills -g -y                                  # z GitHubu (doporučeno — funguje i npx skills update)
+npx skills add raxtor/my-skills -g -a claude-code codex opencode -y   # vybrané agenty
+npx skills add <lokalní cesta> -g -y                                  # z lokální kopie repo
 ```
 
-V opencode se skill vyvolá jako `/ytnote` (command file `~/.config/opencode/commands/ytnote.md`).
+CLI si sám rozhodne, kam skill dá:
+
+- agenti s vlastním adresářem (Claude Code) dostanou **odkaz** na kanonickou kopii,
+- agenti na konvenci `.agents/skills` (Codex, Gemini CLI, Copilot, Antigravity, Cline, opencode) **čtou** kanonickou kopii `~/.agents/skills/<skill>`.
+
+Kdo skill uvidí, napíše `npx skills ls -g --json` (pole `agents`).
+
+## `/ytnote` — alias pro ruční vyvolání
+
+`npx skills` instaluje jen `SKILL.md`; **slash command si musíš přidat sám** pro každý agent, kde ho chceš. Šablony jsou v [`commands/`](commands):
+
+| agent | kam soubor | formát |
+|---|---|---|
+| opencode | `~/.config/opencode/commands/ytnote.md` | markdown + `$ARGUMENTS` |
+| Claude Code | `~/.claude/commands/ytnote.md` | markdown + `$ARGUMENTS` |
+| Codex | `~/.codex/prompts/ytnote.md` | markdown + `$ARGUMENTS` |
+| Gemini CLI | `~/.gemini/commands/ytnote.toml` | TOML + `{{args}}` |
+
+Bez aliasu skill pořád funguje — agent ho načte sám, když sedne zadání (např. když v chatu hodíš YouTube odkaz). Alias znamená „vyvolám ho ručně a hned“.
+
 
 ## Vývoj
 
@@ -39,17 +59,18 @@ U **GitHub** zdroje update funguje normálně.
 
 ## Jak se skill vyvolá
 
-- `metadata.opencode/autoinvoke: "false"` → model skill nevidí, nevyvolá ho sám (ruční režim).
-- `metadata.opencode/slash: "true"` → v opencode v2.1.2 z toho zatím nevznikne `/name` command, reálně to funguje přes command file:
+- `metadata.opencode/autoinvoke: "false"` → **jen v opencode**: model skill nevidí, nevyvolá ho sám (ruční režim). Ostatní agenty tenhle klíč ignorují a skill si vyvolají samy.
+- `metadata.opencode/slash: "true"` → v opencode v2.1.2 z toho zatím nevznikne `/name` command, reálně to funguje přes command file (viz výše).
 
-  ```markdown
-  ---
-  description: ...
-  ---
+```markdown
+---
+description: ...
+---
 
-  Load the `<name>` skill with the skill tool (id `<name>`) and follow it.
+Load the `<name>` skill with the skill tool (id `<name>`) and follow it.
 
-  $ARGUMENTS
-  ```
+$ARGUMENTS
+```
 
-  Příkaz řekne modelovi skill načíst přesně podle jména — funguje i u skillu, který model nevidí.
+Příkaz řekne modelovi skill načíst přesně podle jména — funguje i u skillu, který model nevidí.
+

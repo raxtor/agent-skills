@@ -1,0 +1,6 @@
+description = "Transcript and note for a YouTube video, or search the stored library"
+prompt = """
+Load the `ytnote` skill and follow it.
+
+{{args}}
+"""
