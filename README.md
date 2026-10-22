@@ -1,28 +1,46 @@
 # my_skills
 
-Vlastní skills. Zdroj je tady, nainstalovaná kopie žije v `~/.agents/skills/`.
+Moje vlastní skills pro agenty. Každý skill = jedna složka pod `skills/`.
 
-## Struktura
+[![skills.sh](https://skills.sh/b/raxtor/my-skills)](https://skills.sh/raxtor/my-skills)
 
-```
-skills/<name>/SKILL.md   # jeden skill = jedna složka, frontmatter: name, description, metadata
-skills/<name>/scripts/   # volitelné helper skripty (skill se na ně odkazuje relativně)
-```
+## Obsah
 
-## Instalace / aktualizace
+| skill | co dělá |
+|---|---|
+| [`skills/ytnote`](skills/ytnote) | YouTube video → časovaný přepis + poznámka s klikacími na highlights; vyhledávání v uložených přepisech; přepis z audia přes Deepgram |
+
+## Instalace
 
 ```bash
-npx skills add "D:\web_app\my_skills" -g -y
+npx skills add raxtor/my-skills -g -y     # z GitHubu (doporučeno — funguje i npx skills update)
+npx skills add <lokalní cesta> -g -y     # z lokální kopie repo
 ```
 
-- `-g` = globálně (do `~/.agents/skills/`, čte to opencode i ostatní agenti), bez `-g` by to bylo jen v tomto repo.
-- **Update nefunguje** (`npx skills update` u lokálního source skončí hláškou „cannot be checked automatically“). Změnu tu propaguješ tím samým příkazem — CLI překopíruje soubory.
-- Kdybys chtěl živou kopii bez překopírovávání, nainstaluj symlinkem (`--copy` je default, symlink na Windows padá). Editace v `my_skills` pak jdou rovnou do `~/.agents/skills/`.
+V opencode se skill vyvolá jako `/ytnote` (command file `~/.config/opencode/commands/ytnote.md`).
+
+## Vývoj
+
+```bash
+git clone https://github.com/raxtor/my-skills.git
+cd my_skills
+npx skills add . -g -y      # nainstaluj ze zdroje
+# ... uprav skill ...
+git push                    # a pak npx skills update ytnote
+```
+
+Pozor: u **lokálního** zdroje (`sourceType: local`) `npx skills update` nefunguje — CLI hlásí *„cannot be checked automatically“*. Propaguje se to znovu instalací:
+
+```bash
+npx skills add <lokalní cesta> -g -y
+```
+
+U **GitHub** zdroje update funguje normálně.
 
 ## Jak se skill vyvolá
 
-- `metadata.opencode/autoinvoke: "false"` → model skill nevidí, nevyvolá ho sám.
-- `metadata.opencode/slash: "true"` → v opencode v2.1.2 zatím nevygeneruje `/name` command, reálně funguje command file `~/.config/opencode/commands/<name>.md`:
+- `metadata.opencode/autoinvoke: "false"` → model skill nevidí, nevyvolá ho sám (ruční režim).
+- `metadata.opencode/slash: "true"` → v opencode v2.1.2 z toho zatím nevznikne `/name` command, reálně to funguje přes command file:
 
   ```markdown
   ---
@@ -34,4 +52,4 @@ npx skills add "D:\web_app\my_skills" -g -y
   $ARGUMENTS
   ```
 
-  Command file řekne modelovi skill načíst přesně podle jména — funguje i u skillu, který model nevidí.
+  Příkaz řekne modelovi skill načíst přesně podle jména — funguje i u skillu, který model nevidí.
