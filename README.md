@@ -1,8 +1,9 @@
-# my_skills
+# agent-skills
 
-My own agent skills. One skill = one folder under `skills/`.
+My own agent skills. One skill = one folder under `skills/`; its per-agent invocation aliases
+live in `commands/<skill>/`.
 
-[![skills.sh](https://skills.sh/b/raxtor/my-skills)](https://skills.sh/raxtor/my-skills)
+[![skills.sh](https://skills.sh/b/raxtor/agent-skills)](https://skills.sh/raxtor/agent-skills)
 
 ## What is in here
 
@@ -13,9 +14,9 @@ My own agent skills. One skill = one folder under `skills/`.
 ## Install
 
 ```bash
-npx skills add raxtor/my-skills -g -y                                  # from GitHub (recommended — npx skills update works)
-npx skills add raxtor/my-skills -g -a claude-code codex opencode -y   # pick the agents
-npx skills add <local path> -g -y                                     # from a local checkout
+npx skills add raxtor/agent-skills -g -y                                  # from GitHub (recommended — npx skills update works)
+npx skills add raxtor/agent-skills -g -a claude-code codex opencode -y   # pick the agents
+npx skills add <local path> -g -y                                        # from a local checkout
 ```
 
 The CLI decides where the skill lands:
@@ -29,7 +30,7 @@ The CLI decides where the skill lands:
 ## The `/ytnote` alias
 
 `npx skills` installs `SKILL.md` only; the **slash command has to be added per agent**.
-Templates live in [`commands/`](commands):
+Templates live in [`commands/ytnote/`](commands/ytnote):
 
 | agent | file | format |
 |---|---|---|
@@ -44,8 +45,8 @@ Without the alias the skill still works — the agent loads it on its own when t
 ## Development
 
 ```bash
-git clone https://github.com/raxtor/my-skills.git
-cd my_skills
+git clone https://github.com/raxtor/agent-skills.git
+cd agent-skills
 npx skills add . -g -y      # install from the source
 # ... edit the skill ...
 git push                    # then: npx skills update ytnote
