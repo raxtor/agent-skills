@@ -1,6 +1,6 @@
 ---
 name: ytnote
-description: Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights; searches the stored transcripts by keyword; can re-transcribe from audio when the captions are too lossy. A bare YouTube link counts as a request to note it. Manual skill: the agent loads it when asked (alias `/ytnote`).
+description: Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights; searches the stored transcripts by keyword; can re-transcribe from audio when the captions are too lossy. A bare YouTube link counts as a request to note it. Manual skill — the agent loads it when asked (alias /ytnote).
 metadata:
   opencode/autoinvoke: "false"
   opencode/slash: "true"
