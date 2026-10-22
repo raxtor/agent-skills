@@ -280,7 +280,7 @@ the agent's own process environment, so it never has to be typed into the conver
 When it is missing:
 
 1. Say exactly where it belongs: an environment variable in the user's own account environment
-   user's own account environment (not in this repo, not in the skill, not in chat), set by
+   (not in this repo, not in the skill, not in chat), set by
    the user, followed by a restart of the agent so the new process picks it up. Deepgram is the
    preferred one: `DEEPGRAM_API_KEY` — the others are `ASSEMBLYAI_API_KEY`, `GEMINI_API_KEY`,
    `OPENAI_API_KEY`, `FAL_KEY`, `GROQ_API_KEY`.
