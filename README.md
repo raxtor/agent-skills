@@ -1,66 +1,72 @@
 # my_skills
 
-Moje vlastní skills pro agenty. Každý skill = jedna složka pod `skills/`.
+My own agent skills. One skill = one folder under `skills/`.
 
 [![skills.sh](https://skills.sh/b/raxtor/my-skills)](https://skills.sh/raxtor/my-skills)
 
-## Obsah
+## What is in here
 
-| skill | co dělá |
+| skill | what it does |
 |---|---|
-| [`skills/ytnote`](skills/ytnote) | YouTube video → časovaný přepis + poznámka s klikacími na highlights; vyhledávání v uložených přepisech; přepis z audia přes Deepgram |
+| [`skills/ytnote`](skills/ytnote) | Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights. Searches stored transcripts by keyword. Can re-transcribe from audio when the captions are too lossy. |
 
-## Instalace
+## Install
 
 ```bash
-npx skills add raxtor/my-skills -g -y                                  # z GitHubu (doporučeno — funguje i npx skills update)
-npx skills add raxtor/my-skills -g -a claude-code codex opencode -y   # vybrané agenty
-npx skills add <lokalní cesta> -g -y                                  # z lokální kopie repo
+npx skills add raxtor/my-skills -g -y                                  # from GitHub (recommended — npx skills update works)
+npx skills add raxtor/my-skills -g -a claude-code codex opencode -y   # pick the agents
+npx skills add <local path> -g -y                                     # from a local checkout
 ```
 
-CLI si sám rozhodne, kam skill dá:
+The CLI decides where the skill lands:
 
-- agenti s vlastním adresářem (Claude Code) dostanou **odkaz** na kanonickou kopii,
-- agenti na konvenci `.agents/skills` (Codex, Gemini CLI, Copilot, Antigravity, Cline, opencode) **čtou** kanonickou kopii `~/.agents/skills/<skill>`.
+- agents with their own directory (Claude Code) get a **link** to the canonical copy,
+- agents that follow the `.agents/skills` convention (Codex, Gemini CLI, GitHub Copilot,
+  Antigravity, Cline, opencode) **read** the canonical copy at `~/.agents/skills/<skill>`.
 
-Kdo skill uvidí, napíše `npx skills ls -g --json` (pole `agents`).
+`npx skills ls -g --json` tells you who sees it (the `agents` field).
 
-## `/ytnote` — alias pro ruční vyvolání
+## The `/ytnote` alias
 
-`npx skills` instaluje jen `SKILL.md`; **slash command si musíš přidat sám** pro každý agent, kde ho chceš. Šablony jsou v [`commands/`](commands):
+`npx skills` installs `SKILL.md` only; the **slash command has to be added per agent**.
+Templates live in [`commands/`](commands):
 
-| agent | kam soubor | formát |
+| agent | file | format |
 |---|---|---|
 | opencode | `~/.config/opencode/commands/ytnote.md` | markdown + `$ARGUMENTS` |
 | Claude Code | `~/.claude/commands/ytnote.md` | markdown + `$ARGUMENTS` |
 | Codex | `~/.codex/prompts/ytnote.md` | markdown + `$ARGUMENTS` |
 | Gemini CLI | `~/.gemini/commands/ytnote.toml` | TOML + `{{args}}` |
 
-Bez aliasu skill pořád funguje — agent ho načte sám, když sedne zadání (např. když v chatu hodíš YouTube odkaz). Alias znamená „vyvolám ho ručně a hned“.
+Without the alias the skill still works — the agent loads it on its own when the task fits
+(e.g. when a YouTube link shows up in chat). The alias means "I call it by hand, right now".
 
-
-## Vývoj
+## Development
 
 ```bash
 git clone https://github.com/raxtor/my-skills.git
 cd my_skills
-npx skills add . -g -y      # nainstaluj ze zdroje
-# ... uprav skill ...
-git push                    # a pak npx skills update ytnote
+npx skills add . -g -y      # install from the source
+# ... edit the skill ...
+git push                    # then: npx skills update ytnote
 ```
 
-Pozor: u **lokálního** zdroje (`sourceType: local`) `npx skills update` nefunguje — CLI hlásí *„cannot be checked automatically“*. Propaguje se to znovu instalací:
+Note: with a **local** source (`sourceType: local`) `npx skills update` does not work — the CLI
+reports *"cannot be checked automatically"*. Re-install to propagate instead:
 
 ```bash
-npx skills add <lokalní cesta> -g -y
+npx skills add <local path> -g -y
 ```
 
-U **GitHub** zdroje update funguje normálně.
+With a **GitHub** source, update works normally.
 
-## Jak se skill vyvolá
+## How the skill gets invoked
 
-- `metadata.opencode/autoinvoke: "false"` → **jen v opencode**: model skill nevidí, nevyvolá ho sám (ruční režim). Ostatní agenty tenhle klíč ignorují a skill si vyvolají samy.
-- `metadata.opencode/slash: "true"` → v opencode v2.1.2 z toho zatím nevznikne `/name` command, reálně to funguje přes command file (viz výše).
+- `metadata.opencode/autoinvoke: "false"` — **opencode only**: the model does not see the skill
+  and will not load it by itself (manual mode). Other agents ignore the key and pick the skill
+  up on their own.
+- `metadata.opencode/slash: "true"` — in opencode v2.1.2 this does not produce a `/name`
+  command yet; the command file above is what actually works.
 
 ```markdown
 ---
@@ -72,5 +78,11 @@ Load the `<name>` skill with the skill tool (id `<name>`) and follow it.
 $ARGUMENTS
 ```
 
-Příkaz řekne modelovi skill načíst přesně podle jména — funguje i u skillu, který model nevidí.
+The command tells the model to load the skill by its exact name — which works even for a skill
+the model cannot see.
 
+## Requirements for the audio path
+
+Captions need nothing but network access. Transcribing the audio additionally needs `yt-dlp`,
+`ffmpeg` and a provider key (Deepgram preferred; the extractor also accepts AssemblyAI, Gemini,
+OpenAI, FAL and Groq). The skill explains the details — read `skills/ytnote/SKILL.md`.

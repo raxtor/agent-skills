@@ -1,6 +1,6 @@
 ---
 name: ytnote
-description: Manual skill, invoked as /ytnote or when the user explicitly asks for a transcript, note, or a search of stored videos. Turns a YouTube video into a cached timestamped transcript plus a short note with clickable highlights; searches the stored transcripts by keyword; can re-transcribe from audio with Deepgram. A bare YouTube link counts as a request to note it.
+description: Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights; searches the stored transcripts by keyword; can re-transcribe from audio when the captions are too lossy. A bare YouTube link counts as a request to note it. Manual skill: the agent loads it when asked (alias `/ytnote`).
 metadata:
   opencode/autoinvoke: "false"
   opencode/slash: "true"
@@ -55,7 +55,7 @@ start-of-invocation checks first (queue, size), then, in the user's language:
 
 1. Say in two or three lines what this does: turns a URL into a cached timestamped transcript
    and `note.md` with clickable highlights, searches stored videos by keyword, and can
-   re-transcribe from audio with Deepgram when exact wording matters.
+   re-transcribe from audio when exact wording matters.
 2. Show the library: the 10 most recently added videos from `<root>/*/meta.json` (sort by
    `fetchedAt`), each with title, publish date, and whether `note.md` exists. If there are
    more, say how many.
@@ -77,8 +77,8 @@ An empty store skips step 2: description plus a request for the first URL.
 
    Captions only: no API key, no cost, no audio download. It writes
    `<root>/<videoId>/extract.raw.json` byte-for-byte. Never pipe or redirect that output
-   yourself: shell redirection mangles UTF-8 on some platforms (`Dobrý den` becomes
-   `Dobr├Ż den`), and captured output can be truncated.
+   yourself: shell redirection mangles UTF-8 on some platforms (`Grüße` becomes
+   `Gr├╝e`), and captured output can be truncated.
 4. Normalize:
 
    ```
@@ -100,16 +100,19 @@ for one read, read it in sequential chunks — never sample.
 ```markdown
 # <title exactly as in meta.json>
 
-<https://youtu.be/<id>> · <h:mm:ss> · <titulky YouTube | přepis z audia> · vydáno <YYYY-MM-DD>
+<https://youtu.be/<id>> · <h:mm:ss> · <transcript source> · published <YYYY-MM-DD>
 
-**Shrnutí** — 3–4 sentences: what the video is, who speaks, what it concludes.
+**Summary** — 3–4 sentences: what the video is, who speaks, what it concludes.
 
-## Klíčové momenty
+## Key moments
 
 - what was said and why it matters. [08:12](https://youtu.be/<id>?t=492)
 
 - the next moment. [12:40](https://youtu.be/<id>?t=754)
 ```
+
+The template above is English; write the file in the user's language and translate the fixed
+parts (heading, labels) accordingly.
 
 Rules:
 
@@ -124,12 +127,13 @@ Rules:
   list does not read as a wall. No numbering, no separate link line. The link target is
   `startMs / 1000`, rounded down, as plain seconds (`?t=754`).
 - The source on the meta line comes from `meta.json.transcriptKind`: `captions` →
-  `titulky YouTube`, `transcribed` → `přepis z audia` (add `transcriptionProvider` when it is
-  set). Never call them author-made — the output does not say who uploaded them.
+  "YouTube captions", `transcribed` → "transcribed from audio" (add `transcriptionProvider`
+  when it is set) — in the user's language. Never call them author-made — the output does not
+  say who uploaded them.
   The date comes from `meta.json` (`publishedAt`, date only); if it is missing, write
-  `vydáno neznámé` instead of guessing.
+  "published unknown" instead of guessing.
 - The file keeps the absolute date only: a stored "5 weeks ago" would be wrong when read next
-  year. In chat, show the live age next to it — `vydáno 2026-09-14 (před 5 týdny)` — computed
+  year. In chat, show the live age next to it — "published 2026-09-14 (5 weeks ago)" — computed
   from today's date as the client reports it, with correct plural forms for the user's
   language. If today's date is unavailable, read it from the shell; never guess.
 - Facts come from the transcript only. No outside knowledge, no guessed names, no timestamps
@@ -186,25 +190,31 @@ It costs money per minute, so run it only when asked. An existing `note.md` was 
 old text — say that it is now stale and offer to regenerate it. Prerequisites are listed under
 "No transcript".
 
-## Audio language and provider
+## Audio transcription — language and provider
 
-The language cannot be forced: the extractor always sends `detect_language=true`, and the only
-environment lever is the model (`SUMMARIZE_DEEPGRAM_TRANSCRIPTION_MODEL`, default `nova-3`).
+Audio transcription is optional and costs money; captions are the default path. When it is
+needed:
+
+- **Provider.** The extractor (`@steipete/summarize`) picks the first provider whose key is
+  set — AssemblyAI, Gemini, OpenAI, FAL, Deepgram. `fetch.mjs` prefers Deepgram: with
+  `DEEPGRAM_API_KEY` set it masks the other keys for the first attempt and retries with the
+  real environment if that yields no transcript, so a video is never lost because one provider
+  failed. `transcriptionProvider` in the result says who actually transcribed — the note must
+  name that instead of assuming Deepgram.
+- **Language.** It cannot be forced: the request always sends `detect_language=true`. The
+  only Deepgram-specific lever is the model (`SUMMARIZE_DEEPGRAM_TRANSCRIPTION_MODEL`, default
+  `nova-3`); the other providers have their own.
+
 So decide before paying:
 
 1. Know the video's language — read it from an existing transcript or the title; if neither is
    conclusive, ask the user.
-2. Check it against the language list of the configured model in Deepgram's docs. If the model
-   does not support that language, do not run `--audio`: say which language it is and that the
-   run would be wasted money.
+2. Check it against the provider's supported language list (for Deepgram: the model's language
+   list in Deepgram's docs). If the language is not supported, do not run `--audio`: say which
+   language it is and that the run would be wasted money.
 3. After transcribing, read the first lines. Wrong language or gibberish means a failed run:
    ask the user what language the video is in and report it. This tool cannot resend with a
    manual language code — the request is always auto-detect — so do not promise a retry.
-
-Deepgram is tried first: the fetch masks the other provider keys for the first attempt, then
-retries with the real environment if that yields no transcript, so a video is never lost just
-because Deepgram failed. `transcriptionProvider` in the result says who actually transcribed;
-the note must name that rather than assuming Deepgram.
 
 ## No transcript
 
@@ -231,8 +241,11 @@ caption track for the video. Then:
 Never summarize the description as if it were the video. Never install software on your own.
 
 The audio path needs all three on the machine: `yt-dlp` and `ffmpeg` on PATH (the extractor
-runs `yt-dlp -x --audio-format mp3`), plus `DEEPGRAM_API_KEY`. Check with `yt-dlp --version`,
-`ffmpeg -version` and the credential check below; name the missing one and stop.
+runs `yt-dlp -x --audio-format mp3`), plus a transcription provider key. Deepgram is preferred
+(`DEEPGRAM_API_KEY`); the extractor also accepts AssemblyAI (`ASSEMBLYAI_API_KEY`), Gemini
+(`GEMINI_API_KEY` or `GOOGLE_API_KEY`), OpenAI (`OPENAI_API_KEY`), FAL (`FAL_KEY`) and Groq
+(`GROQ_API_KEY`). Check with `yt-dlp --version`, `ffmpeg -version` and the credential check
+below; name the missing one and stop.
 
 ## Queue checks
 
@@ -261,20 +274,22 @@ Do not retry an entry that is not due, even if the user asks — say when it wil
 
 ## Credentials — never in chat
 
-Only the audio path needs `DEEPGRAM_API_KEY`; captions never do. The extractor reads it from
+Only the audio path needs a provider key; captions never do. The extractor reads it from
 the agent's own process environment, so it never has to be typed into the conversation.
 
 When it is missing:
 
-1. Say exactly where it belongs: an environment variable named `DEEPGRAM_API_KEY` in the
+1. Say exactly where it belongs: an environment variable in the user's own account environment
    user's own account environment (not in this repo, not in the skill, not in chat), set by
-   the user, followed by a restart of the agent so the new process picks it up.
-2. Say how to create one: `console.deepgram.com` → API Keys → create. New accounts usually
+   the user, followed by a restart of the agent so the new process picks it up. Deepgram is the
+   preferred one: `DEEPGRAM_API_KEY` — the others are `ASSEMBLYAI_API_KEY`, `GEMINI_API_KEY`,
+   `OPENAI_API_KEY`, `FAL_KEY`, `GROQ_API_KEY`.
+2. Say how to create one — for Deepgram: `console.deepgram.com` → API Keys → create. New accounts usually
    include free credit, so a few hours of audio often costs nothing — check the console for
    the current amount rather than promising a number.
-3. Verify presence without revealing it:
-   `node -p "process.env.DEEPGRAM_API_KEY ? 'set' : 'missing'"`.
-   Never print, echo, log or persist the value.
+3. Verify presence without revealing it — for Deepgram:
+   `node -p "process.env.DEEPGRAM_API_KEY ? 'set' : 'missing'"` (same for any other provider
+   key). Never print, echo, log or persist the value.
 4. If the user refuses, leave the video queued — that is a valid answer.
 
 ## Rules
