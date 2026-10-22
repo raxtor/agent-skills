@@ -247,23 +247,36 @@ caption track for the video. Then:
 
 1. Read the upload date from `<root>/<videoId>/published.txt` if it still exists (a failed
    normalize leaves it behind); missing means unknown.
-2. Delete the `<root>/<videoId>/` directory this run created, so a stale cache entry cannot
-   pretend to be a transcript.
+2. Clean up this run's artefacts but **keep `published.txt`**: delete `extract.raw.json` and
+   `meta.json` from `<root>/<videoId>/`, so the directory cannot pretend to be a transcript (it
+   has no `transcript.md`). Keep the date file — the upload date is what decides between waiting
+   and transcribing, and it cannot be recovered later.
 3. Ask the user which way to go — wait, transcribe from audio, or drop it from the queue
    (`node "<skill-dir>/scripts/queue.mjs" drop <videoId>`) — and give a recommendation based
    on that date:
    - **uploaded less than ~30 days ago → wait.** Captions are usually generated within hours;
-     queue it with `node "<skill-dir>/scripts/queue.mjs" add <videoId> "<url>"` and say when
-     it will be re-checked.
-   - **older than ~30 days, or date unavailable → transcribe from audio.** YouTube does not
-     add captions retroactively to old videos (captions disabled, music only, unsupported
-     language), so waiting is pointless. Name the cost: free up to the provider's size limit
-     (Groq's Whisper, ~25 MB of audio) or billed per minute (Deepgram).
+     queue it with `node "<skill-dir>/scripts/queue.mjs" add <videoId> "<url>" --reason captions`
+     and say when it will be re-checked.
+   - **older than ~30 days, or date unavailable → the captions will never come.** YouTube does
+     not add captions retroactively to old videos (captions disabled, music only, unsupported
+     language), so waiting is pointless. Offer to transcribe from audio and name the cost: free
+     up to the provider's size limit (Groq's Whisper, ~25 MB of audio) or billed per minute
+     (Deepgram).
+   - **a live stream that has not ended yet → wait.** Its captions are finalised after the
+     stream ends, so it is the "too fresh" case regardless of age; queue it with
+     `--reason captions` and re-check once the stream is over.
 4. Transcribe only on explicit consent:
    `node "<skill-dir>/scripts/fetch.mjs" <videoId> --audio`, then normalize as usual.
    If normalize still finds no segments after that, the message names the reason — check the
    three prerequisites below before reporting a real failure.
    Otherwise report the real failure and, if it was queued, leave it queued.
+5. **Transcription needs a provider key. If there is none, or the user declines to pay for
+   one, the video waits** — it is not a failure and it is not lost:
+   `node "<skill-dir>/scripts/queue.mjs" add <videoId> "<url>" --reason transcription`
+   and say that it stays queued until a key is available. A queued video with that reason is
+   waiting for a credential, not for YouTube, so caption retries cannot help it (see "Queue
+   checks"). The captions path needs no key, so a video that only waits for captions is never
+   blocked this way.
 
 Never summarize the description as if it were the video. Never install software on your own.
 
@@ -284,9 +297,13 @@ If `size.mjs` reports `OVER LIMIT`, tell the user once and offer to delete the c
 files it counts — never the transcribed ones, and never without asking.
 
 - empty `due` array → nothing to do.
-- otherwise, for each entry, retry the captions-only fetch. If segments appear: normalize,
-  then `queue.mjs drop <videoId>`. If not: `queue.mjs bump <videoId>` (checks at +6 h, +24 h,
-  +72 h, then `gaveUp: true` and it stops being retried) and report the next check time.
+- otherwise, for each entry, look at its `reason`:
+  - **`transcription`** → **do not fetch.** The video waits for a provider key, not for
+    captions; a caption retry cannot help it. Report it and move on.
+  - **`captions`** (or no reason) → retry the captions-only fetch. If segments appear:
+    normalize, then `queue.mjs drop <videoId>`. If not: `queue.mjs bump <videoId>` (checks at
+    +6 h, +24 h, +72 h, then `gaveUp: true` and it stops being retried) and report the next
+    check time.
 
 `due` is a time filter, so processing other videos in between costs nothing — nothing is
 re-checked before its window has passed.
@@ -300,12 +317,17 @@ the queue — a bare videoId tells the user nothing about what they are deciding
 node "<skill-dir>/scripts/queue.mjs" titles
 ```
 
-One JSON entry per waiting video: `videoId`, `title`, `author`, `uploadDate`, `attempts`,
-`nextCheckAt`, `gaveUp`. Render it as a table and lead with the count — "2 videos waiting":
+One JSON entry per waiting video: `videoId`, `title`, `author`, `uploadDate`, `reason`,
+`attempts`, `nextCheckAt`, `gaveUp`. Render it as a table and lead with the count — "2 videos
+waiting":
 
-| videoId | title | uploaded | attempts | next check |
-|---|---|---|---|---|
-| `AQavE0b-jNs` | Jan Pivec vzpomíná (TV film) — RETRO SHOW OK3 | 2021-03-18 | 2 | 2026-10-23 |
+| videoId | title | uploaded | waiting for | attempts | next check |
+|---|---|---|---|---|---|
+| `AQavE0b-jNs` | Jan Pivec vzpomíná (TV film) — RETRO SHOW OK3 | 2021-03-18 | captions | 2 | 2026-10-23 |
+
+`reason` says what the video waits for: **captions** (YouTube has not generated them yet) or
+**transcription** (it needs a provider key — see "No transcript"). Say it in the table, because
+the two need different actions from the user: one is time, the other is a credential.
 
 `nextCheckAt` is unix ms — render it as a date. The upload date is best effort ("unknown" when
 YouTube does not say). The title is the point: the user decides from it whether to keep
@@ -338,7 +360,9 @@ When it is missing:
 3. Verify presence without revealing it — for Deepgram:
    `node -p "process.env.DEEPGRAM_API_KEY ? 'set' : 'missing'"` (same for any other provider
    key). Never print, echo, log or persist the value.
-4. If the user refuses, leave the video queued — that is a valid answer.
+4. If the user refuses, leave the video queued with the reason `transcription`
+   (`node "<skill-dir>/scripts/queue.mjs" add <videoId> "<url>" --reason transcription`) — that
+   is a valid answer, not a failure.
 
 ## Rules
 

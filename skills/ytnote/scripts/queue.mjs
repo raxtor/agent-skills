@@ -18,7 +18,13 @@ const save = (rows) => {
   renameSync(tmp, file)
 }
 
-const [cmd, id, url] = process.argv.slice(2)
+const args = process.argv.slice(2)
+// `add` takes an optional --reason: "captions" (waiting for YouTube to generate them) or
+// "transcription" (waiting for a provider key - caption retries cannot help those).
+const reasonIdx = args.indexOf('--reason')
+const reason = reasonIdx >= 0 ? args[reasonIdx + 1] : null
+const positional = args.filter((_, i) => !(reasonIdx >= 0 && (i === reasonIdx || i === reasonIdx + 1)))
+const [cmd, id, url] = positional
 const rows = load()
 const now = Date.now()
 
@@ -31,7 +37,7 @@ if (cmd === 'list') {
   // oEmbed for the title, the watch page for the upload date. Both best effort.
   const enriched = await Promise.all(
     rows.map(async (r) => {
-      const info = { videoId: r.videoId, title: 'unknown', uploadDate: 'unknown', attempts: r.attempts, nextCheckAt: r.nextCheckAt, gaveUp: r.gaveUp }
+      const info = { videoId: r.videoId, title: 'unknown', uploadDate: 'unknown', reason: r.reason ?? 'captions', attempts: r.attempts, nextCheckAt: r.nextCheckAt, gaveUp: r.gaveUp }
       try {
         const o = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://youtu.be/' + r.videoId)}&format=json`).then((x) => x.json())
         info.title = o.title
@@ -50,9 +56,11 @@ if (cmd === 'list') {
   console.log(JSON.stringify(enriched, null, 2))
 } else if (cmd === 'add' && id && url) {
   const existing = rows.find((r) => r.videoId === id)
+  const why = reason ?? existing?.reason ?? 'captions'
   // One check already happened, so the first retry waits a full backoff step.
   if (existing) {
     existing.url = url
+    existing.reason = why
     existing.attempts = 1
     existing.nextCheckAt = now + BACKOFF_HOURS[0] * HOUR
     existing.gaveUp = false
@@ -60,6 +68,7 @@ if (cmd === 'list') {
     rows.push({
       videoId: id,
       url,
+      reason: why,
       attempts: 1,
       nextCheckAt: now + BACKOFF_HOURS[0] * HOUR,
       addedAt: now,
