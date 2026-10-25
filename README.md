@@ -101,3 +101,7 @@ the model cannot see.
 Captions need nothing but network access. Transcribing the audio additionally needs `yt-dlp`,
 `ffmpeg` and a provider key (Deepgram preferred; the extractor also accepts AssemblyAI, Gemini,
 OpenAI, FAL and Groq). The skill explains the details — read `skills/ytnote/SKILL.md`.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
