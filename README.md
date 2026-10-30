@@ -9,7 +9,7 @@ live in `commands/<skill>/`.
 
 | skill | what it does |
 |---|---|
-| [`skills/ytnote`](skills/ytnote) | Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights. Searches stored transcripts by keyword. Can re-transcribe from audio when the captions are too lossy. |
+| [`skills/ytnote`](skills/ytnote) | Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights. Searches stored transcripts by keyword. Can re-transcribe from audio when the captions are too lossy. Removes a stored video on request. |
 
 ## Security
 
@@ -101,6 +101,13 @@ the model cannot see.
 Captions need nothing but network access. Transcribing the audio additionally needs `yt-dlp`,
 `ffmpeg` and a provider key (Deepgram preferred; the extractor also accepts AssemblyAI, Gemini,
 OpenAI, FAL and Groq). The skill explains the details — read `skills/ytnote/SKILL.md`.
+
+## Removing a video
+
+`node skills/ytnote/scripts/remove.mjs <videoId> [--yes] [--raw-only] [--include-paid-raw]`, or
+`--all-captions-raw` to sweep every captions raw file. Dry run by default; a video transcribed
+from audio is refused without `--include-paid-raw`, because its raw JSON is the only copy of
+what was paid for.
 
 ## License
 

@@ -51,8 +51,9 @@ do not pick another directory.
 Size: about 0.8 MB per hour of video, ~80 % of it `extract.raw.json`. That file is a build
 artifact: for captions it can be fetched again for free, but for a video transcribed from
 audio (`transcriptKind: transcribed`) it is the only copy of what was paid for — never delete
-those. Transcripts and notes are content and are never deleted automatically. At personal
-scale this needs no cleanup.
+those. Transcripts and notes are never deleted automatically: removing a video is a manual
+step the user asks for (see "Removing a video"). At personal scale this needs no regular
+cleanup.
 
 Layout:
 
@@ -191,6 +192,35 @@ not answer the question, say that instead of filling the gap from your own knowl
 only when `transcript.md` is missing or empty — a new session that does not remember the
 analysis still has the source text on disk.
 
+## Removing a video
+
+The store belongs to the user, so a video can be deleted — but only when they ask for it, and
+never as a side effect of another task. One script does all of it, so this is never a hand-made
+`rm -rf` or PowerShell `Remove-Item`:
+
+```
+node "<skill-dir>/scripts/remove.mjs" <videoId> [<videoId> ...] [--yes] [--raw-only] [--include-paid-raw]
+node "<skill-dir>/scripts/remove.mjs" --all-captions-raw [--yes]
+```
+
+- **Dry run by default.** Without `--yes` it prints what it would delete and how much space that
+  frees, and deletes nothing. Run it, show the plan, and only then run it again with `--yes`
+  once the user confirms. Never put `--yes` on the first call.
+- **A captions video is cheap to drop.** Transcript, meta, note and raw file go; `fetch.mjs`
+  rebuilds the transcript for free. The note does not come back — say so.
+- **A transcribed video is not.** With `transcriptKind: transcribed` the `extract.raw.json` is
+  the only copy of audio that was paid for, so the script refuses the target and names the flag
+  that overrides it (`--include-paid-raw`). Ask before using that flag; never assume it.
+- `--raw-only` keeps the transcript and the note and drops just the raw JSON — the cleanup
+  `size.mjs` suggests when the store is over its limit. It respects the paid-raw rule too.
+- `--all-captions-raw` sweeps every captions raw file in the store and skips transcribed ones
+  unconditionally. That is what to offer when `size.mjs` reports `OVER LIMIT`.
+- Removing a video also drops a pending queue row for it. `queue.mjs drop` alone only forgets
+  the queue entry and leaves the archive on disk; the two stay separate on purpose.
+
+Report the id, what was removed and the space freed. If the script refuses a target, say why —
+a refusal is the paid-raw guard, not a failure.
+
 ## Re-transcribing
 
 Captions are free and good enough to extract information, but auto-captions mangle names,
@@ -250,7 +280,9 @@ caption track for the video. Then:
 2. Clean up this run's artefacts but **keep `published.txt`**: delete `extract.raw.json` and
    `meta.json` from `<root>/<videoId>/`, so the directory cannot pretend to be a transcript (it
    has no `transcript.md`). Keep the date file — the upload date is what decides between waiting
-   and transcribing, and it cannot be recovered later.
+   and transcribing, and it cannot be recovered later. Do this by hand, not with `remove.mjs`:
+   that deletes the whole directory, `published.txt` included, and the date is the one thing
+   here that cannot be recovered.
 3. Ask the user which way to go — wait, transcribe from audio, or drop it from the queue
    (`node "<skill-dir>/scripts/queue.mjs" drop <videoId>`) — and give a recommendation based
    on that date:
@@ -294,7 +326,9 @@ At the start of every invocation, run `node "<skill-dir>/scripts/queue.mjs" due`
 only when it says `OVER LIMIT`.
 
 If `size.mjs` reports `OVER LIMIT`, tell the user once and offer to delete the captions raw
-files it counts — never the transcribed ones, and never without asking.
+files it counts — never the transcribed ones, and never without asking. The command for that is
+`node "<skill-dir>/scripts/remove.mjs" --all-captions-raw` (dry run first, `--yes` after the
+user agrees; see "Removing a video").
 
 - empty `due` array → nothing to do.
 - otherwise, for each entry, look at its `reason`:
