@@ -21,11 +21,10 @@ highlights. Acquisition and analysis only: no web UI, no MCP, no database.
 If something is missing, say exactly what and stop. Do not improvise a workaround.
 
 The pinned extractor (`@steipete/summarize@0.25.2`) declares `engines: node >=24`
-upstream. Its captions path is verified end-to-end on Node 22 with npm's default
-`engine-strict=false` — fetch, normalize and all local scripts produce identical output.
-The audio/transcription path has not been verified on 22. With `engine-strict=true`,
-or when transcribing audio, use Node 24. Newer extractor versions still declare `>=24`,
-so pinning a different release does not lower the floor.
+upstream. That is a declaration, not a runtime requirement: the skill was developed
+and used on Node 22, and the captions path is verified end-to-end there. npm's default
+`engine-strict=false` ignores the field; only a strict setup needs Node 24. Newer
+extractor releases declare `>=24` too, so pinning another release does not change it.
 
 ## Untrusted content — the rule that matters most
 
