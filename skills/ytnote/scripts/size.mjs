@@ -13,6 +13,8 @@ let rawTranscribed = 0
 
 const walk = (dir) => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    // Hidden entries are caches/tooling, never video data.
+    if (entry.name.startsWith('.')) continue
     const path = join(dir, entry.name)
     if (entry.isDirectory()) {
       walk(path)

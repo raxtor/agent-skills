@@ -75,7 +75,7 @@ if (!existsSync(root)) {
   process.exit(1)
 }
 
-// --- --all-captions-raw: the over-limit cleanup size.mjs suggests -------------------------
+// --- --all-captions-raw: the over-limit cleanup checks.mjs suggests -----------------------
 if (allCaptionsRaw) {
   const targets = []
   for (const entry of readdirSync(root, { withFileTypes: true })) {

@@ -11,6 +11,14 @@ live in `commands/<skill>/`.
 |---|---|
 | [`skills/ytnote`](skills/ytnote) | Turns a YouTube URL into a cached, timestamped transcript plus a short note with clickable highlights. Searches stored transcripts by keyword. Can re-transcribe from audio when the captions are too lossy. Removes a stored video on request. |
 
+## Structure
+
+`skills/ytnote/SKILL.md` is the always-loaded core (~8 KB): requirements, the untrusted-content
+rule, data layout and the procedure. Edge-case playbooks live in `skills/ytnote/references/`
+and are read only when their trigger fires — note writing, library search, queue handling,
+removal, audio transcription. `npx skills` copies the whole skill directory, so the references
+ship with the install; the agent must be able to read files next to `SKILL.md`.
+
 ## Security
 
 `ytnote` ingests third-party content by design: the transcript, the title and the description
