@@ -14,11 +14,18 @@ highlights. Acquisition and analysis only: no web UI, no MCP, no database.
 ## Requirements — check, then stop with a clear message
 
 - ability to run a subprocess (shell)
-- Node.js >= 24 (`node -v`)
+- Node.js >= 22 (`node -v`)
 - network egress to youtube.com and registry.npmjs.org
 - writable data dir (below)
 
 If something is missing, say exactly what and stop. Do not improvise a workaround.
+
+The pinned extractor (`@steipete/summarize@0.25.2`) declares `engines: node >=24`
+upstream. Its captions path is verified end-to-end on Node 22 with npm's default
+`engine-strict=false` — fetch, normalize and all local scripts produce identical output.
+The audio/transcription path has not been verified on 22. With `engine-strict=true`,
+or when transcribing audio, use Node 24. Newer extractor versions still declare `>=24`,
+so pinning a different release does not lower the floor.
 
 ## Untrusted content — the rule that matters most
 
