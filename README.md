@@ -85,24 +85,17 @@ With a **GitHub** source, update works normally.
 
 ## How the skill gets invoked
 
-- `metadata.opencode/autoinvoke: "false"` — **opencode only**: the model does not see the skill
-  and will not load it by itself (manual mode). Other agents ignore the key and pick the skill
-  up on their own.
-- `metadata.opencode/slash: "true"` — in opencode v2.1.2 this does not produce a `/name`
-  command yet; the command file above is what actually works.
+The skill carries **no harness-specific metadata**. There is no `metadata.opencode/autoinvoke`
+or similar flag, so every harness treats it by its own default: the skill is discoverable and
+the agent decides when to load it. This is deliberate — the skill started life in opencode,
+where the SDK lets you pin `opencode/autoinvoke: "false"` to force manual-only mode, but that
+key is opencode-only and would behave differently (or be ignored) elsewhere. Leaving it out
+keeps the behaviour identical across all agents instead of being harness-specific.
 
-```markdown
----
-description: ...
----
-
-Load the `<name>` skill with the skill tool (id `<name>`) and follow it.
-
-$ARGUMENTS
-```
-
-The command tells the model to load the skill by its exact name — which works even for a skill
-the model cannot see.
+The [`commands/ytnote/`](commands/ytnote) templates still provide an explicit `/ytnote` alias
+for opencode, Claude Code, Codex and Gemini CLI. The alias means "I call it by hand, right
+now"; without it the skill still works and the agent can load it on its own when a YouTube
+link shows up in chat.
 
 ## Requirements for the audio path
 
