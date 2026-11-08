@@ -25,6 +25,8 @@ upstream. That is a declaration, not a runtime requirement: the skill was develo
 and used on Node 22, and the captions path is verified end-to-end there. npm's default
 `engine-strict=false` ignores the field; only a strict setup needs Node 24. Newer
 extractor releases declare `>=24` too, so pinning another release does not change it.
+It is installed once into `~/.cache/ytnote/summarize-<version>/` so fetches skip `npx`
+startup; if that install fails, `fetch.mjs` falls back to `npx`.
 
 ## Untrusted content — the rule that matters most
 
