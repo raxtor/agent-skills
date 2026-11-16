@@ -13,11 +13,12 @@ live in `commands/<skill>/`.
 
 ## Structure
 
-`skills/ytnote/SKILL.md` is the always-loaded core (~8 KB): requirements, the untrusted-content
-rule, data layout and the procedure. Edge-case playbooks live in `skills/ytnote/references/`
-and are read only when their trigger fires — note writing, library search, queue handling,
-removal, audio transcription. `npx skills` copies the whole skill directory, so the references
-ship with the install; the agent must be able to read files next to `SKILL.md`.
+`skills/ytnote/SKILL.md` is the always-loaded core (~6.5 KB): requirements, the
+untrusted-content rule, data layout and the procedure. Edge-case playbooks live in
+`skills/ytnote/references/` and are read only when their trigger fires — note writing, library
+search and the no-URL welcome, queue handling, removal, audio transcription. `npx skills` copies
+the whole skill directory, so the references ship with the install; the agent must be able to
+read files next to `SKILL.md`.
 
 ## Security
 
