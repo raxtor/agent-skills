@@ -4,6 +4,42 @@ Loaded when `normalize.mjs` reports no transcript segments, when the user wants 
 transcript from audio, or when a provider key is missing. Paths are relative to `<skill-dir>`.
 Captions are free and are the default; everything below is optional and may cost money.
 
+## How the captions path actually works
+
+Read this before concluding that a video has no captions. The extractor does call
+`/api/timedtext` — but never as a browser would. It gets the caption tracks from the Innertube
+player endpoint while pretending to be a mobile app:
+
+1. it tries the `youtubei` provider — this currently fails,
+2. it falls back to `captionTracks`: `POST /youtubei/v1/player` with `clientName: "ANDROID"`
+   (`clientVersion: "20.10.38"`), then fetches the `captionTracks[].baseUrl` from the answer.
+
+Measured 2026-11-19 against one signed `baseUrl`, varying only the client identity:
+
+| client | playability | caption tracks | `timedtext` |
+|---|---|---|---|
+| `IOS` | OK | 6 | 8 079 B of `events[]` |
+| `ANDROID` | OK | 6 | 3 877 B (srv3, not json3) |
+| `WEB` | UNPLAYABLE | 0 | empty |
+
+The `WEB` client is what a real browser sends, and its `timedtext` returns `200` with
+`content-length: 0` and `content-type: text/html` — on a signed, unexpired URL, with a valid
+logged-in session, on the actual watch page. So:
+
+**An empty body means the client identity is blocked, not that the video lacks captions.**
+The page's own `ytInitialPlayerResponse` can still list 30+ tracks while every one of them
+returns zero bytes.
+
+When `normalize.mjs` reports no segments, read `diagnostics.transcript.attemptedProviders` in
+`extract.raw.json` before saying anything to the user:
+
+- both `youtubei` and `captionTracks` listed and still no segments → the block is upstream.
+  Retrying now will not help; say the fetch was blocked and offer `--audio`.
+- `captionTracks` absent → the video genuinely has no caption track; follow `No transcript`.
+
+Never report "the video has no captions" from an empty body alone. Those are different facts
+and the user acts differently on each.
+
 ## Re-transcribing
 
 Captions are free and good enough to extract information, but auto-captions mangle names,

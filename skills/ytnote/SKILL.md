@@ -110,6 +110,10 @@ URL or video ID is neither an error nor a guess: follow `references/library.md`.
    `<root>/<videoId>/extract.raw.json` byte-for-byte. Never pipe or redirect that output
    yourself: shell redirection mangles UTF-8 on some platforms (`Grüße` becomes
    `Gr├╝e`), and captured output can be truncated.
+
+   If it exits non-zero, the extractor itself failed. Read the first section of
+   `references/transcription.md` before reporting anything: a blocked fetch and a video that
+   has no captions are different facts, and only one of them is worth retrying.
 4. Normalize:
 
    ```
