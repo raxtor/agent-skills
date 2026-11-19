@@ -60,8 +60,9 @@ caption track for the video. Then:
 
 1. Read the upload date from `<root>/<videoId>/published.txt` if it still exists (a failed
    normalize leaves it behind); missing means unknown.
-2. Clean up this run's artefacts but **keep `published.txt`**: delete `extract.raw.json` and
-   `meta.json` from `<root>/<videoId>/`, so the directory cannot pretend to be a transcript (it
+2. Clean up this run's artefacts but **keep `published.txt`**: delete `extract.raw.json`,
+   `mode.txt` and `meta.json` from `<root>/<videoId>/`, so the directory cannot pretend to be a
+   transcript (it
    has no `transcript.md`). Keep the date file — the upload date is what decides between waiting
    and transcribing, and it cannot be recovered later. Do this by hand, not with `remove.mjs`:
    that deletes the whole directory, `published.txt` included, and the date is the one thing

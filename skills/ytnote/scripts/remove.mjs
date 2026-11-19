@@ -47,7 +47,19 @@ const dirBytes = (dir) => {
 // nothing left to retry.
 const dropFromQueue = (id) => {
   if (!existsSync(queueFile)) return false
-  const rows = JSON.parse(readFileSync(queueFile, 'utf8'))
+  // A corrupt queue must not block a removal the user already asked for: the video still goes,
+  // only the row is left behind for the next queue command to deal with.
+  let rows
+  try {
+    rows = JSON.parse(readFileSync(queueFile, 'utf8'))
+  } catch {
+    console.error(`queue file is unreadable (${queueFile}); its row for ${id} stays behind`)
+    return false
+  }
+  if (!Array.isArray(rows)) {
+    console.error(`queue file is unreadable (${queueFile}); its row for ${id} stays behind`)
+    return false
+  }
   const next = rows.filter((r) => r.videoId !== id)
   if (next.length === rows.length) return false
   const tmp = `${queueFile}.tmp`

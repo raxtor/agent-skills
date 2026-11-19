@@ -11,7 +11,18 @@ const HOUR = 3600 * 1000
 const BACKOFF_HOURS = [6, 24, 72]
 const MAX_ATTEMPTS = 4
 
-const load = () => (existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [])
+// Refuses rather than silently starting from []: a corrupt queue can be fixed by hand, a queue
+// that quietly lost its rows cannot. The read-only checks in checks.mjs stay tolerant instead —
+// they are the first thing every invocation runs.
+const load = () => {
+  if (!existsSync(file)) return []
+  try {
+    const rows = JSON.parse(readFileSync(file, 'utf8'))
+    if (Array.isArray(rows)) return rows
+  } catch {}
+  console.error(`queue file is unreadable: ${file}\nfix or delete it, then run this again`)
+  process.exit(1)
+}
 const save = (rows) => {
   const tmp = `${file}.tmp`
   writeFileSync(tmp, JSON.stringify(rows, null, 2) + '\n')

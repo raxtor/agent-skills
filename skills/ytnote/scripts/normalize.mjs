@@ -48,10 +48,24 @@ const hms = (ms) => {
 const publishedFile = join(dir, 'published.txt')
 const publishedAt = existsSync(publishedFile) ? readFileSync(publishedFile, 'utf8').trim() : null
 
+const modeFile = join(dir, 'mode.txt')
+const fetchMode = existsSync(modeFile) ? readFileSync(modeFile, 'utf8').trim() : null
+
 // YouTube captions may be ASR or author-made and the output does not say which, so the flag
-// only distinguishes downloaded captions from audio transcription.
+// only distinguishes downloaded captions from audio transcription. fetch.mjs ran in exactly
+// one of those modes and wrote it down, which makes mode.txt the only authoritative answer.
+// Archives that predate mode.txt fall back to the extract's own fields, and when those are
+// silent too the label stays 'transcribed': a raw that might be the only copy of what was
+// paid for is never called free just to make the size report tidier.
 const transcriptSource = e.transcriptSource ?? null
-const transcriptKind = /caption|youtubei/i.test(String(transcriptSource)) ? 'captions' : 'transcribed'
+const transcriptKind =
+  fetchMode === 'audio'
+    ? 'transcribed'
+    : fetchMode === 'captions'
+      ? 'captions'
+      : /caption|youtubei/i.test(String(transcriptSource))
+        ? 'captions'
+        : 'transcribed'
 
 const meta = {
   videoId: (String(e.url ?? '').match(/(?:v=|youtu\.be\/|shorts\/|live\/)([\w-]{11})/) ?? [])[1] ?? null,
@@ -70,4 +84,5 @@ const meta = {
 writeFileSync(join(dir, 'transcript.md'), transcript.map((s) => `[${hms(s.startMs)}] ${s.text}`).join('\n') + '\n')
 writeFileSync(join(dir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n')
 rmSync(publishedFile, { force: true })
+rmSync(modeFile, { force: true })
 console.log(JSON.stringify(meta))

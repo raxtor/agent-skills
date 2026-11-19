@@ -4,6 +4,11 @@ The core runs `checks.mjs` at the start of every invocation and passes you `due`
 window has passed) and `size` (the store guard). This file says what to do with them.
 Paths are relative to `<skill-dir>`.
 
+If the output carries `queueCorrupt: true`, `<root>/_queue.json` could not be read. Say so and
+name the file — do **not** present the queue as empty, because a queued video would then be
+silently dropped from the retries. `queue.mjs` refuses to run until the file is fixed or
+deleted; fixing it by hand keeps the rows.
+
 If `size.overLimit` is true, tell the user once and offer to delete the captions raw files it
 counts — never the transcribed ones, and never without asking. The command for that is
 `node "<skill-dir>/scripts/remove.mjs" --all-captions-raw` (dry run first, `--yes` after the

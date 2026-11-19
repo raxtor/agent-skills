@@ -141,9 +141,16 @@ if (audio && process.env.DEEPGRAM_API_KEY) {
 
 await uploadDateDone
 
+// normalize.mjs has to know whether the raw came from captions or from a paid audio run, and
+// the extract does not say. This process does, so record it here instead of letting normalize
+// guess from the extract's own fields. Kept in step with the raw: no raw, no marker.
+const modeFile = join(dir, 'mode.txt')
+
 if (code !== 0) {
   rmSync(file, { force: true })
+  rmSync(modeFile, { force: true })
   console.error(`summarize exited with ${code}`)
   process.exit(code ?? 1)
 }
+writeFileSync(modeFile, audio ? 'audio\n' : 'captions\n')
 console.log(file)
